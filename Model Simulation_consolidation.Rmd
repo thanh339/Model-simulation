@@ -1,0 +1,182 @@
+---
+title: "Master thesis model simulation_consolidated"
+author: "Thanh Nguyen Van"
+date: "10/2/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#Loading Package
+library(tidyverse)
+library(RConics)
+library(triangle)
+```
+
+#General arbitrary office motivation
+```{r}
+#Draw parameters
+n=10000 #sample size
+set.seed(100)
+b_1<- runif(n, 0,1)
+b_2 <- runif(n,b_1,1)
+alp_1<- runif(n,0,2*(b_2-b_1))
+alp_2<- runif(n,0,2*(b_2-b_1))
+z_low = (alp_1*alp_2+2*b_1*alp_2-2*b_2*alp_1)/(2*(2*(b_2-b_1)-alp_1))
+z_high= (alp_1*alp_2+2*b_1*alp_2-2*b_2*alp_1 + 2*alp_1-4*(b_2-b_1))/(2*(alp_2-2*(b_2-b_1)))
+snl<-rtriangle(n=n,a=-0.5,1.5,1)
+mu_x<-(snl+0.5)/2
+cb_d<- b_1*alp_2/4+alp_1*alp_2/8
+cb_c<-(2*b_1+2*b_2+b_2*alp_1+alp_1-2*alp_2-b_1*alp_2-alp_1*alp_2)/4
+cb_b<-(alp_2-alp_1-b_1-b_2-2)/2
+cb_a <-seq(1,1,n)
+cb_df <- cbind(cb_a,cb_b,cb_c,cb_d)
+cb_root <-apply(cb_df,1,cubic)
+z_star<- c(cb_root[which(cb_root>0&cb_root<1)])
+zstar_low <-z_star-z_low  # Compare z_star with the lower bound.
+zhigh_star <-z_high-z_star  # Compare z_star with the higher bound.
+T_1L<-b_1+mu_x+alp_1*(z_star-b_1)/(2*z_star+alp_1)
+T_2L<-b_2 + mu_x-b_2*alp_2/(2*z_star+alp_2)
+T_1H<-b_1+mu_x+(1-b_1)*alp_1/(2*(1-z_star)+alp_1)
+T_2H<-b_2+mu_x+(z_star-b_2)*alp_2/(2*(1-z_star)+alp_2)
+T_1S<- b_1+mu_x
+T_2S<- b_2+mu_x
+policy <- cbind(mu_x,z_star,z_low,zstar_low,"del_b"=(b_2-b_1), "ave_b"=(b_2+b_1)/2,alp_1,T_1S,T_1L,T_2L,T_1H,T_2H,T_2S,alp_2,"delta_alp" = alp_2-alp_1, "ave_alp"=(alp_1+alp_2)/2,zhigh_star)
+policy <- as.data.frame(policy)
+Equi_policy<-filter(policy,zstar_low>0,zhigh_star>0) #applying the lower and higher bound condition on z*
+Equi_policy[1:10,]
+
+#This figure shows that z* seem to evolve around average_b (the red line represent the linear regression relationship between Z* and average bias of the senior members)
+ggplot(Equi_policy, aes(x=ave_b)) + geom_point(aes(y= z_star,,color="z_star"))+geom_smooth(mapping =aes(x=ave_b, y=z_star,color = "fiting z_star on ave_b") ,method = "lm") + theme(legend.position = "right")+scale_colour_manual("", breaks = c("fiting z_star on ave_b", "z_star"), values = c("green", "blue"))  + labs(title="Figure.1. The choice of threshold c* (z*) depends on average bias")
+#The relationship of z* and average office motivation factor (alpha) is more complicated
+ggplot(Equi_policy, aes(x=ave_alp)) + geom_point(aes(y= z_star,,color="z_star"))+geom_smooth(mapping =aes(x=ave_alp, y=z_star,color = "linear fitting z_star on ave_alp") ,method = "lm") + theme(legend.position = "right")+scale_colour_manual("", breaks = c("linear fitting z_star on ave_alp", "z_star"), values = c("green", "blue"))  + labs(title="Figure.2. The choice of threshold c* (z*) depends on average office motivation")
+
+
+```
+
+#symmetric office motivation
+
+```{r}
+#Draw parameters
+n=10000 #sample size
+set.seed(100)
+b_1<- runif(n, 0,1)
+b_2 <- runif(n,b_1,1)
+alp_<- runif(n,0,2*(b_2-b_1))
+z_low = (alp_^2+2*b_1*alp_-2*b_2*alp_)/(2*(2*(b_2-b_1)-alp_))
+z_high= (alp_*alp_+2*b_1*alp_-2*b_2*alp_ + 2*alp_-4*(b_2-b_1))/(2*(alp_-2*(b_2-b_1)))
+snl<-rtriangle(n=n,a=-0.5,1.5,1)
+mu_x<-(snl+0.5)/2
+cb_d<- b_1*alp_/4+alp_*alp_/8
+cb_c<-(2*b_1+2*b_2+b_2*alp_+alp_-2*alp_-b_1*alp_-alp_*alp_)/4
+cb_b<-(alp_-alp_-b_1-b_2-2)/2
+cb_a <-seq(1,1,n)
+cb_df <- cbind(cb_a,cb_b,cb_c,cb_d)
+cb_root <-apply(cb_df,1,cubic)
+z_star<- c(cb_root[which(cb_root>0&cb_root<1)])
+zstar_low <-z_star-z_low # Compare z_star with the lower bound.
+zhigh_star <-z_high-z_star # Compare z_star with the higher bound.
+T_1L<-b_1+mu_x+alp_*(z_star-b_1)/(2*z_star+alp_)
+T_2L<-b_2 + mu_x-b_2*alp_/(2*z_star+alp_)
+T_1H<-b_1+mu_x+(1-b_1)*alp_/(2*(1-z_star)+alp_)
+T_2H<-b_2+mu_x+(z_star-b_2)*alp_/(2*(1-z_star)+alp_)
+T_1S<- b_1+mu_x
+T_2S<- b_2+mu_x
+policy_2 <- cbind(mu_x,z_star,"del_b"=(b_2-b_1), "alp_delta_b"=alp_-(b_2-b_1), "ave_b"=(b_2+b_1)/2,alp_,"mid_T_iS"=(T_1S+T_2S)/2, T_1S,T_1L,T_2L,T_1H,T_2H,T_2S,zstar_low,zhigh_star)
+policy_2 <- as.data.frame(policy_2)
+Alp_group <- ifelse(policy_2$alp_delta_b <0,"alp<delta_b","alp>= delta_b")
+Bias_group <- ifelse(policy_2$ave_b <0.5,"b1+b2<1","b1+b2>=1")
+policy_2 <- mutate(policy_2,Alp_group,Bias_group)
+Equi_policy_2<-filter(policy_2,zstar_low>0,zhigh_star>0)
+
+Equi_policy_2[1:10,]
+
+
+#Illustrate Z_star and average bias
+
+ggplot(Equi_policy_2, aes(x=ave_b)) + geom_point(aes(y= z_star,color="z_star"))+ geom_line(aes(y= ave_b, color = "average_b"), size = 1.0) + labs(title="Z_star on average bias")+scale_colour_manual("", breaks = c("average_b", "z_star"), values = c("green", "blue"))
+
+
+#Illustrate Table 1
+
+ggplot(Equi_policy_2, aes(x=ave_b)) + geom_jitter(aes(y=z_star,width = 10,color="z_star"))+ geom_line(aes(y= ave_b, color="Average_b"), size = 0.5) + geom_line(aes(y= 0.5), color="yellow", size = 1.0)+ facet_grid(cols = vars(Alp_group), rows = vars(Bias_group))+ theme(legend.position = "right")+scale_colour_manual("", breaks = c("Average_b", "z_star"), values = c("green", "blue"))  + labs(title="Simulation for Table.1")
+
+# Change of z_star on alpha
+ggplot(Equi_policy_2, aes(x=alp_)) + geom_point(aes(y= z_star),color="blue")+ geom_line(aes(y= 0.5), color="green", size = 1.0)+ labs(x = "Alpha", y = "z_star", title = "z_star on alpha")
+#Change of z_star on (alpha - Average b)
+
+ggplot(Equi_policy_2, aes(x=alp_delta_b)) + geom_point(aes(y= z_star),color="blue") + labs(x = "Alpha-delta_b", y = "z_star", title = "z_star on alpha")
+
+#Compare (T_1) and (T_2) difference on (alpha - Average b)
+ggplot(Equi_policy_2, aes(x=alp_delta_b)) + geom_point(aes(y= T_2L-T_1L),color="blue") + labs(x = "Alpha-delta_b", y = "T_2L-T_1L", title = "T_2L-T_1L on alpha")
+
+ggplot(Equi_policy_2, aes(x=alp_delta_b)) + geom_point(aes(y= T_2H-T_1H), color="green", size = 1.0) + labs(x = "Alpha-delta_b", y = "T_2H-T_1H", title = "T_2H-T_1H on alpha")
+
+
+#Illustrate T_1L
+ggplot(Equi_policy_2, aes(x=ave_b)) + geom_point(aes(y=T_1L-mu_x,width = 1,color="T_1L-mu_x"))+ geom_line(aes(y= ave_b, color="Average_b"), size = 1) + geom_line(aes(y= 0.5), color="yellow", size = 1.0)+ facet_grid(cols = vars(Alp_group), rows = vars(Bias_group))+ theme(legend.position = "right")+scale_colour_manual("", breaks = c("Average_b", "T_1L-mu_x"), values = c("green", "blue"))  + labs(title="Illustration for T_1L")
+
+#Illustrate T_1H
+ggplot(Equi_policy_2, aes(x=ave_b)) + geom_point(aes(y=T_1H-mu_x,width = 1,color="T_1H-mu_x"))+ geom_line(aes(y= ave_b, color="Average_b"), size = 1) + geom_line(aes(y= 0.5), color="yellow", size = 1.0)+ facet_grid(cols = vars(Alp_group), rows = vars(Bias_group))+ theme(legend.position = "right")+scale_colour_manual("", breaks = c("Average_b", "T_1H-mu_x"), values = c("green", "blue"))  + labs(title="Illustration for T_1H")
+
+#Illustrate T_2L
+ggplot(Equi_policy_2, aes(x=ave_b)) + geom_point(aes(y=T_2L-mu_x,width = 1,color="T_2L-mu_x"))+ geom_line(aes(y= ave_b, color="Average_b"), size = 1) + geom_line(aes(y= 0.5), color="yellow", size = 1.0)+ facet_grid(cols = vars(Alp_group), rows = vars(Bias_group))+ theme(legend.position = "right")+scale_colour_manual("", breaks = c("Average_b", "T_2L-mu_x"), values = c("green", "blue"))  + labs(title="Illustration for T_2L")
+
+
+#Illustrate T_2H
+ggplot(Equi_policy_2, aes(x=ave_b)) + geom_point(aes(y=T_2H-mu_x,width = 1,color="T_2H-mu_x"))+ geom_line(aes(y= ave_b, color="Average_b"), size = 1) + geom_line(aes(y= 0.5), color="yellow", size = 1.0)+ facet_grid(cols = vars(Alp_group), rows = vars(Bias_group))+ theme(legend.position = "right")+scale_colour_manual("", breaks = c("Average_b", "T_2H-mu_x"), values = c("green", "blue"))  + labs(title="Illustration for T_2H")
+
+```
+
+#symmetric office motivation and maximum office motivation (senior member convergence)
+
+```{r}
+#Draw parameters
+n=10000 #sample size
+set.seed(100)
+b_1<- runif(n, 0,1)
+b_2 <- runif(n,b_1,1) #b_2>= b_1
+alp_1<- 2*(b_2-b_1)
+alp_2<- 2*(b_2-b_1)
+Z_low = (alp_1*alp_2+2*b_1*alp_2-2*b_2*alp_1)/(2*(2*(b_2-b_1)-alp_1))
+z_high= (alp_1*alp_2+2*b_1*alp_2-2*b_2*alp_1 + 2*alp_1-4*(b_2-b_1))/(2*(alp_2-2*(b_2-b_1)))
+snl<-rtriangle(n=n,a=-0.5,1.5,1)
+mu_x<-(snl+0.5)/2
+cb_d<- b_1*alp_2/4+alp_1*alp_2/8
+cb_c<-(2*b_1+2*b_2+b_2*alp_1+alp_1-2*alp_2-b_1*alp_2-alp_1*alp_2)/4
+cb_b<-(alp_2-alp_1-b_1-b_2-2)/2
+cb_a <-seq(1,1,n)
+cb_df <- cbind(cb_a,cb_b,cb_c,cb_d)
+cb_root <-apply(cb_df,1,cubic)
+z_star<- c(cb_root[which(cb_root>0&cb_root<1)])
+
+zstar_low <-z_star-z_low
+zhigh_star <-z_high-z_star
+Z_compare <- cbind(z_low,z_star,z_high,"star-low"=z_star-z_low, "high-star"=z_high-z_star)
+
+T_1L<-b_1+mu_x+alp_1*(z_star-b_1)/(2*z_star+alp_1)
+T_2L<-b_2 + mu_x-b_2*alp_2/(2*z_star+alp_2)
+T_1H<-b_1+mu_x+(1-b_1)*alp_1/(2*(1-z_star)+alp_1)
+T_2H<-b_2+mu_x+(z_star-b_2)*alp_2/(2*(1-z_star)+alp_2)
+T_1S<- b_1+mu_x
+T_2S<- b_2+mu_x
+policy_3 <- cbind("c_star"= mu_x+z_star,z_star,"delta_b"=(b_2-b_1), "ave_b"=(b_2+b_1)/2,alp_1,T_1S,T_1L,T_2L,T_1H,T_2H,T_2S,alp_2,"delta_alp" = alp_2-alp_1,zstar_low,zhigh_star,mu_x)
+policy_3 <- as.data.frame(policy_3)
+#Equi_policy<-filter(policy,zstar_low>0,zhigh_star>0), we don't need to apply the condition for z anymore.
+policy_3[1:10,]
+
+#Compare the policy propsal in case of high and low message of senior members with the choice of threshold of c. We remove value of mu_x from the proposal to make it comparable with z*. As the signal is identically received by all players, this will not change their overall behaviour. The result imply that in case of convergence in senior member action, rookie member navigate the threshold to stay in the between the high and low message proposal.
+
+ggplot(policy_3, aes(x=ave_b)) + geom_point(aes(y= z_star,color="z_star"))+geom_smooth(mapping =aes(x=ave_b, y=T_1L-mu_x,color = "linear fitting (T_1L-mu_x) on ave_b") ,method = "lm") + geom_smooth(mapping =aes(x=ave_b, y=T_1H-mu_x,color = "linear fitting (T_1H-mu_x) on ave_b") ,method = "lm")+geom_smooth(mapping =aes(x=ave_b, y=z_star,color = "linear fiting z_star on ave_b") ,method = "lm") + theme(legend.position = "right")+scale_colour_manual("", breaks = c("linear fitting (T_1L-mu_x) on ave_b","linear fitting (T_1H-mu_x) on ave_b", "z_star","linear fiting z_star on ave_b"), values = c("green","red", "blue","yellow"))  + labs(title="Figure.1. The choice of threshold c* (z*) versus choise of policy proposal")
+
+
+
+```
+
+

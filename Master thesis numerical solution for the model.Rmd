@@ -1,0 +1,130 @@
+---
+title: "Master thesis numerical solution for the model"
+author: "Thanh Nguyen Van"
+date: "10/2/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#Loading Package
+library(tidyverse)
+library(RConics)
+library(triangle)
+library(gridExtra)
+library(grid)
+```
+
+#General arbitrary office motivation
+```{r}
+#Draw parameters
+n=10000 #sample size
+set.seed(100)
+b_1<- runif(n, 0,1)
+b_2 <- runif(n,b_1,1)
+alp_1<- runif(n,0,2*(b_2-b_1))
+alp_2<- runif(n,0,2*(b_2-b_1))
+z_low = (alp_1*alp_2+2*b_1*alp_2-2*b_2*alp_1)/(2*(2*(b_2-b_1)-alp_1))
+z_high= (alp_1*alp_2+2*b_1*alp_2-2*b_2*alp_1 + 2*alp_1-4*(b_2-b_1))/(2*(alp_2-2*(b_2-b_1)))
+snl<-rtriangle(n=n,a=-0.5,1.5,1)
+mu_x<-(snl+0.5)/2
+cb_d<- b_1*alp_2/4+alp_1*alp_2/8
+cb_c<-(2*b_1+2*b_2+b_2*alp_1+alp_1-2*alp_2-b_1*alp_2-alp_1*alp_2)/4
+cb_b<-(alp_2-alp_1-b_1-b_2-2)/2
+cb_a <-seq(1,1,n)
+cb_df <- cbind(cb_a,cb_b,cb_c,cb_d)
+cb_root <-apply(cb_df,1,cubic)
+z_star<- c(cb_root[which(cb_root>0&cb_root<1)])
+zstar_low <-z_star-z_low  # Compare z_star with the lower bound.
+zhigh_star <-z_high-z_star  # Compare z_star with the higher bound.
+T_1L<-b_1+mu_x+alp_1*(z_star-b_1)/(2*z_star+alp_1)
+T_2L<-b_2 + mu_x-b_2*alp_2/(2*z_star+alp_2)
+T_1H<-b_1+mu_x+(1-b_1)*alp_1/(2*(1-z_star)+alp_1)
+T_2H<-b_2+mu_x+(z_star-b_2)*alp_2/(2*(1-z_star)+alp_2)
+T_1S<- b_1+mu_x
+T_2S<- b_2+mu_x
+policy <- cbind(mu_x,z_star,z_low,zstar_low,"del_b"=(b_2-b_1), "ave_b"=(b_2+b_1)/2,alp_1,T_1S,T_1L,T_2L,T_1H,T_2H,T_2S,alp_2,"delta_alp" = alp_2-alp_1, "ave_alp"=(alp_1+alp_2)/2,zhigh_star,q_L,q_H)
+policy <- as.data.frame(policy)
+Equi_policy<-filter(policy,zstar_low>0,zhigh_star>0) #applying the lower and higher bound condition on z*
+
+#This figure shows that, in equilibrium, the higher the office motication, the further each senior member move away from her ideology.
+
+plot1<- ggplot(Equi_policy, aes(x=alp_1)) + geom_point(aes(y= T_1L-T_1S))+geom_smooth(mapping =aes(x=alp_1, y=T_1L-T_1S,color = "lm fiting") ,method = "lm")
+plot2<- ggplot(Equi_policy, aes(x=alp_1)) + geom_point(aes(y= T_1H-T_1S))+geom_smooth(mapping =aes(x=alp_1, y=T_1H-T_1S,color = "lm fiting") ,method = "lm")
+plot3<-ggplot(Equi_policy, aes(x=alp_2)) + geom_point(aes(y= T_2S-T_2L))+geom_smooth(mapping =aes(x=alp_2, y=T_2S-T_2L,color = "lm fiting") ,method = "lm")
+plot4<-ggplot(Equi_policy, aes(x=alp_2)) + geom_point(aes(y= T_2S-T_2H))+geom_smooth(mapping =aes(x=alp_2, y=T_2S-T_2H,color = "lm fiting") ,method = "lm")
+
+grid.arrange(plot1, plot2,plot3,plot4,nrow=2, ncol=2, bottom = textGrob("Figure 1. Impact of office motivation on policy proposals",gp=gpar(fontsize=12,font=1)))
+
+#This figure shows correlation between rookie member's optimal threshold (c*=mu_x+z*) and the midpoint of senior members' ideal policy positions.
+
+ggplot(Equi_policy, aes(x=mu_x+ ave_b)) + geom_point(aes(y= mu_x+z_star))+geom_smooth(mapping =aes(x=mu_x+ave_b, y=mu_x+z_star,color = "lm fiting") ,method = "lm") + theme(legend.position = "right")+scale_colour_manual("", breaks = c("lm fiting", "c_star"), values = c("green", "blue"))  + labs(title="Figure 2. Correlation of optimal threshold of rookie member and average ideoligy of senior members")
+
+
+
+
+
+
+
+```
+
+#symmetric office motivation
+
+```{r}
+#Draw parameters
+n=10000 #sample size
+set.seed(100)
+b_1<- runif(n, 0,1)
+b_2 <- runif(n,b_1,1)
+alp_<- runif(n,0,2*(b_2-b_1))
+z_low = (alp_^2+2*b_1*alp_-2*b_2*alp_)/(2*(2*(b_2-b_1)-alp_))
+z_high= (alp_*alp_+2*b_1*alp_-2*b_2*alp_ + 2*alp_-4*(b_2-b_1))/(2*(alp_-2*(b_2-b_1)))
+snl<-rtriangle(n=n,a=-0.5,1.5,1)
+mu_x<-(snl+0.5)/2
+cb_d<- b_1*alp_/4+alp_*alp_/8
+cb_c<-(2*b_1+2*b_2+b_2*alp_+alp_-2*alp_-b_1*alp_-alp_*alp_)/4
+cb_b<-(alp_-alp_-b_1-b_2-2)/2
+cb_a <-seq(1,1,n)
+cb_df <- cbind(cb_a,cb_b,cb_c,cb_d)
+cb_root <-apply(cb_df,1,cubic)
+z_star<- c(cb_root[which(cb_root>0&cb_root<1)])
+zstar_low <-z_star-z_low # Compare z_star with the lower bound.
+zhigh_star <-z_high-z_star # Compare z_star with the higher bound.
+T_1L<-b_1+mu_x+alp_*(z_star-b_1)/(2*z_star+alp_)
+T_2L<-b_2 + mu_x-b_2*alp_/(2*z_star+alp_)
+T_1H<-b_1+mu_x+(1-b_1)*alp_/(2*(1-z_star)+alp_)
+T_2H<-b_2+mu_x+(z_star-b_2)*alp_/(2*(1-z_star)+alp_)
+T_1S<- b_1+mu_x
+T_2S<- b_2+mu_x
+policy_2 <- cbind(mu_x,z_star,"del_b"=(b_2-b_1), "alp_delta_b"=alp_-(b_2-b_1), "ave_b"=(b_2+b_1)/2,alp_,"mid_T_iS"=(T_1S+T_2S)/2, T_1S,T_1L,T_2L,T_1H,T_2H,T_2S,zstar_low,zhigh_star)
+policy_2 <- as.data.frame(policy_2)
+Alp_group <- ifelse(policy_2$alp_delta_b <0,"alp<delta_b","alp>= delta_b")
+Bias_group <- ifelse(policy_2$ave_b <0.5,"b1+b2<1","b1+b2>=1")
+policy_2 <- mutate(policy_2,Alp_group,Bias_group)
+Equi_policy_2<-filter(policy_2,zstar_low>0,zhigh_star>0)
+
+##This figure shows correlation between rookie member's optimal threshold (c*=mu_x+z*) and the midpoint of senior members' ideal policy positions, in contrast to Figure 2.
+
+ggplot(Equi_policy_2, aes(x=mu_x+ave_b)) + geom_point(aes(y= mu_x+z_star))+geom_smooth(mapping =aes(x=mu_x+ave_b, y=mu_x+z_star,color = "lm fiting") ,method = "lm") + theme(legend.position = "right")+scale_colour_manual("", breaks = c("lm fiting", "c_star"), values = c("green", "blue")) + labs(title="Figure 3. Correlation of optimal threshold of rookie member and average ideology of symmetric senior members")
+
+
+
+
+
+
+
+#Numerical illustration for Table 1
+
+ggplot(Equi_policy_2, aes(x=ave_b)) + geom_jitter(aes(y=z_star,width = 10,color="z_star"))+ geom_line(aes(y= ave_b, color="Average_b"), size = 0.5) + geom_line(aes(y= 0.5), color="yellow", size = 1.0)+ facet_grid(cols = vars(Alp_group), rows = vars(Bias_group))+ theme(legend.position = "right")+scale_colour_manual("", breaks = c("Average_b", "z_star"), values = c("green", "blue"))  + labs(title="Figure 4. Numerical illustration for Table 1")
+
+
+```
+
+
+
